@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dr. Singh- Your trusted AI medical companion</title>
+
+    <!-- CSS & JS Libraries -->
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: url(/static/images/wallpaper.jpeg);
+            color: #ececf1;
+            overflow: hidden;
+        }
+
+        #particles-js {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+
+        .header {
+            width: 100vw;
+            background: white;
+            color: black;
+            padding: 20px 0 16px 0;
+            text-align: left;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-bottom: 1px solid #444654;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+
+        #chat-box {
+            position: absolute;
+            top: 76px;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            z-index: 1;
+            scroll-behavior: smooth;
+            background: transparent;
+        }
+
+        .message-row {
+            display: flex;
+            width: 100%;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .message-row.bot {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border-radius: 16px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .user-msg {
+            background-color: rgb(234, 234, 234);
+            color: black;
+            border-bottom-right-radius: 0;
+        }
+
+        .bot-msg {
+            background-color: white;
+            color: black;
+            border-bottom-left-radius: 0;
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            font-style: italic;
+            color: black;
+            padding: 10px 16px;
+            background-color: white;
+            border-radius: 12px;
+            max-width: 75%;
+            animation: fadeIn 0.4s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 14px 0;
+            z-index: 2;
+        }
+
+        .input-bar-inner {
+            width: 100%;
+            display: flex;
+            gap: 8px;
+            padding: 0 16px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.08rem;
+            background: white;
+            color: black;
+            outline: none;
+            transition: background 0.2s;
+        }
+
+        #user-input:focus {
+            background: white;
+        }
+
+        #send-btn,
+        #tts-toggle,
+        #mic-btn {
+            padding: 0 16px;
+            background: rgb(205, 205, 205);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #send-btn:hover,
+        #mic-btn:hover {
+            background: #005fcc;
+        }
+
+        #tts-toggle {
+            background: rgb(205, 205, 205);
+            color: #ececf1;
+        }
+
+        #tts-toggle:hover {
+            background: #005fcc;
+        }
+
+        @media (max-width: 700px) {
+            .input-bar-inner {
+                padding: 0 8px;
+            }
+
+            #send-btn,
+            #tts-toggle,
+            #mic-btn {
+                padding: 0 12px;
+                font-size: 1rem;
+            }
+
+            .message-bubble {
+                max-width: 90%;
+                font-size: 0.95rem;
+            }
+        }
+
+        pre {
+            background-color: #2a2b32;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        code {
+            color: #00e1ff;
+        }
+
+        a {
+            color: #4da6ff;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="particles-js"></div>
+    <div class="header">Dr. Singh</div>
+    <div id="chat-box"></div>
+
+    <form class="input-bar" onsubmit="event.preventDefault(); sendMessage();">
+        <div class="input-bar-inner">
+            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" autofocus>
+            <button type="submit" id="send-btn">Send</button>
+            <button type="button" id="mic-btn">🎤</button>
+            <button type="button" id="tts-toggle">🔊</button>
+        </div>
+    </form>
+
+    <script>
+        //    // Particles.js
+        //     particlesJS("particles-js", {
+        //         "particles": {
+        //             "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+        //             "color": { "value": "#0078ff" },
+        //             "shape": { "type": "circle" },
+        //             "opacity": { "value": 0.4, "random": true },
+        //             "size": { "value": 4, "random": true },
+        //             "line_linked": { "enable": true, "distance": 150, "color": "#ececf1", "opacity": 0.2, "width": 1 },
+        //             "move": { "enable": true, "speed": 2, "out_mode": "out" }
+        //         },
+        //         "interactivity": {
+        //             "detect_on": "canvas",
+        //             "events": {
+        //                 "onhover": { "enable": true, "mode": "repulse" },
+        //                 "onclick": { "enable": true, "mode": "push" }
+        //             },
+        //             "modes": {
+        //                 "repulse": { "distance": 100, "duration": 0.4 },
+        //                 "push": { "particles_nb": 4 }
+        //             }
+        //         },
+        //         "retina_detect": true
+        //     });
+        //     
+        // TTS Toggle
+        let ttsEnabled = true;
+        const ttsToggleBtn = document.getElementById("tts-toggle");
+        ttsToggleBtn.addEventListener("click", () => {
+            ttsEnabled = !ttsEnabled;
+            ttsToggleBtn.textContent = ttsEnabled ? "🔊" : "🔇";
+            if (!ttsEnabled && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        });
+
+        // Send Message
+        async function sendMessage() {
+            const inputField = document.getElementById("user-input");
+            const message = inputField.value.trim();
+            if (!message) return;
+
+            const chatBox = document.getElementById("chat-box");
+
+            const userContainer = document.createElement("div");
+            userContainer.className = "message-row user";
+
+            const userMsg = document.createElement("div");
+            userMsg.className = "message-bubble user-msg";
+            userMsg.textContent = message;
+
+            userContainer.appendChild(userMsg);
+            chatBox.appendChild(userContainer);
+
+            inputField.value = "";
+
+            const typingIndicator = document.createElement("div");
+            typingIndicator.className = "typing-indicator";
+            typingIndicator.textContent = "Bot is typing...";
+            chatBox.appendChild(typingIndicator);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+                typingIndicator.remove();
+
+                const botContainer = document.createElement("div");
+                botContainer.className = "message-row bot";
+
+                const botMsg = document.createElement("div");
+                botMsg.className = "message-bubble bot-msg";
+                const markdownHTML = marked.parse(data.reply || "");
+                botMsg.innerHTML = DOMPurify.sanitize(markdownHTML);
+
+                botContainer.appendChild(botMsg);
+                chatBox.appendChild(botContainer);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                if (ttsEnabled) speakBotReply(data.reply);
+            } catch (error) {
+                typingIndicator.remove();
+                console.error("Error:", error);
+            }
+        }
+
+        // TTS Speak Function
+        function speakBotReply(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Mic to Text with streaming interim results
+        const micBtn = document.getElementById("mic-btn");
+        if ('webkitSpeechRecognition' in window) {
+            const recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = "en-US";
+
+            micBtn.addEventListener("click", () => {
+                recognition.start();
+                micBtn.textContent = "🎙️ Listening...";
+            });
+
+            recognition.onresult = function (event) {
+                let interimTranscript = "";
+                let finalTranscript = "";
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                document.getElementById("user-input").value = finalTranscript + interimTranscript;
+            };
+
+            recognition.onerror = function (event) {
+                console.error('Speech recognition error', event.error);
+                micBtn.textContent = "🎤";
+            };
+
+            recognition.onend = () => {
+                micBtn.textContent = "🎤";
+            };
+        } else {
+            micBtn.disabled = true;
+            micBtn.textContent = "🚫";
+        }
+    </script>
+</body>
+
+</html>
